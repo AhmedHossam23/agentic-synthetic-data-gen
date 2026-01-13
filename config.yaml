@@ -1,0 +1,155 @@
+# Synthetic Data Generator Configuration
+
+# Generation settings
+generation:
+  num_samples: 400
+  min_samples: 300
+  max_samples: 500
+  batch_size: 10
+  max_retries: 5  # Maximum retries per review before moving to next
+
+# Model configuration
+models:
+  - name: "openai"
+    provider: "openai"
+    model: "gpt-4-turbo-preview"
+    temperature: 0.7
+    max_tokens: 500
+    weight: 0.5  # 50% of samples
+    
+  - name: "google"
+    provider: "google"
+    model: "gemini-2.0-flash"
+    temperature: 0.2
+    max_tokens: 500
+    weight: 0.5  # 50% of samples
+
+# Personas configuration
+personas:
+  - name: "Enterprise CTO"
+    role: "Chief Technology Officer"
+    company_size: "large"
+    experience_years: 15
+    focus_areas: ["security", "scalability", "integration", "enterprise features"]
+    language_style: "professional"
+    rating_distribution:
+      5: 0.3
+      4: 0.4
+      3: 0.2
+      2: 0.08
+      1: 0.02
+      
+  - name: "Startup Founder"
+    role: "Founder/CEO"
+    company_size: "small"
+    experience_years: 5
+    focus_areas: ["cost", "ease of use", "speed", "customer support"]
+    language_style: "casual"
+    rating_distribution:
+      5: 0.4
+      4: 0.35
+      3: 0.15
+      2: 0.08
+      1: 0.02
+      
+  - name: "Product Manager"
+    role: "Product Manager"
+    company_size: "medium"
+    experience_years: 8
+    focus_areas: ["features", "user experience", "roadmap", "pricing"]
+    language_style: "balanced"
+    rating_distribution:
+      5: 0.25
+      4: 0.35
+      3: 0.25
+      2: 0.1
+      1: 0.05
+      
+  - name: "Developer"
+    role: "Software Developer"
+    company_size: "medium"
+    experience_years: 6
+    focus_areas: ["documentation", "API quality", "developer experience", "performance"]
+    language_style: "technical"
+    rating_distribution:
+      5: 0.3
+      4: 0.35
+      3: 0.2
+      2: 0.1
+      1: 0.05
+
+# Review characteristics
+review_characteristics:
+  min_length: 50
+  max_length: 800
+  min_sentences: 3
+  max_sentences: 15
+  include_pros: true
+  include_cons: true
+  include_use_case: true
+  include_rating_justification: true
+
+# Quality guardrails
+quality_guardrails:
+  diversity:
+    min_vocabulary_overlap: 0.3
+    max_vocabulary_overlap: 0.7
+    min_semantic_similarity: 0.2
+    max_semantic_similarity: 0.85
+    
+  bias_detection:
+    max_sentiment_skew: 0.3  # Max difference in sentiment distribution
+    min_rating_variance: 0.5  # Minimum variance in ratings
+    check_unrealistic_patterns: true
+    
+  realism:
+    min_readability_score: 30
+    max_readability_score: 80
+    check_domain_terms: true
+    min_domain_term_ratio: 0.05
+    
+  rejection_thresholds:
+    diversity_score: 0.2  # Lower threshold - allow more diversity variation
+    bias_score: 0.8  # Higher threshold - be more lenient with bias
+    realism_score: 0.3  # Lower threshold - allow more realism variation
+    overall_quality: 0.4  # Lower threshold - be more lenient overall
+
+# Domain configuration (SaaS tools)
+domain:
+  name: "SaaS Tool Reviews"
+  categories:
+    - "Project Management"
+    - "CRM"
+    - "Communication"
+    - "Analytics"
+    - "Development Tools"
+    - "Marketing Automation"
+    - "HR & Recruiting"
+    - "Finance & Accounting"
+  
+  common_terms:
+    - "integration"
+    - "API"
+    - "dashboard"
+    - "workflow"
+    - "automation"
+    - "scalability"
+    - "onboarding"
+    - "pricing"
+    - "support"
+    - "features"
+    - "user interface"
+    - "mobile app"
+    - "security"
+    - "compliance"
+    - "reporting"
+    - "collaboration"
+    - "customization"
+
+# Output settings
+output:
+  format: "json"
+  include_metadata: true
+  include_quality_scores: true
+  output_dir: "output"
+  quality_report_path: "output/quality_report.md"
