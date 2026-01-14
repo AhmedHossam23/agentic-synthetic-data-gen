@@ -69,6 +69,12 @@ class QualityGuardrail:
         
         # Domain terms for realism checking
         self.domain_terms = set(term.lower() for term in config.domain.common_terms)
+        
+        # Cache for embeddings (review_id -> embedding)
+        self._embedding_cache: Dict[str, List[float]] = {}
+        
+        # Limit comparisons for performance (compare to last N reviews only)
+        self.max_comparison_reviews = 20
     
     @traceable(name="calculate_quality_metrics")
     def evaluate(self, review: Review, existing_reviews: List[Review]) -> QualityMetrics:
@@ -281,11 +287,14 @@ class QualityGuardrail:
         if not existing_reviews:
             return 0.0
         
+        # Limit to recent reviews for performance
+        reviews_to_compare = existing_reviews[-self.max_comparison_reviews:]
+        
         # Extract unique words (lowercase, no punctuation)
         review_words = set(re.findall(r'\b\w+\b', review.text.lower()))
         
         all_existing_words = set()
-        for r in existing_reviews:
+        for r in reviews_to_compare:
             all_existing_words.update(re.findall(r'\b\w+\b', r.text.lower()))
         
         if not all_existing_words:
@@ -305,25 +314,28 @@ class QualityGuardrail:
         if not existing_reviews:
             return 0.0
         
+        # Limit to recent reviews for performance (O(n) instead of O(n²))
+        reviews_to_compare = existing_reviews[-self.max_comparison_reviews:]
+        
         # Use Gemini embeddings if available
         if self.use_semantic_similarity and self.gemini_model:
             try:
                 import google.generativeai as genai
                 
-                # Get embeddings using Gemini
-                review_embedding = self._get_gemini_embedding(review.text)
+                # Get embedding for new review (with caching)
+                review_embedding = self._get_gemini_embedding_cached(review.id, review.text)
                 if review_embedding is None:
-                    return self._fallback_semantic_similarity(review, existing_reviews)
+                    return self._fallback_semantic_similarity(review, reviews_to_compare)
                 
-                # Get embeddings for existing reviews
+                # Get embeddings for existing reviews (with caching)
                 existing_embeddings = []
-                for existing_review in existing_reviews:
-                    emb = self._get_gemini_embedding(existing_review.text)
+                for existing_review in reviews_to_compare:
+                    emb = self._get_gemini_embedding_cached(existing_review.id, existing_review.text)
                     if emb is not None:
                         existing_embeddings.append(emb)
                 
                 if not existing_embeddings:
-                    return self._fallback_semantic_similarity(review, existing_reviews)
+                    return self._fallback_semantic_similarity(review, reviews_to_compare)
                 
                 # Calculate cosine similarity
                 similarities = []
@@ -336,7 +348,17 @@ class QualityGuardrail:
                 warnings.warn(f"Error in Gemini semantic similarity calculation: {e}. Using fallback.")
         
         # Fallback: Simple word overlap-based similarity
-        return self._fallback_semantic_similarity(review, existing_reviews)
+        return self._fallback_semantic_similarity(review, reviews_to_compare)
+    
+    def _get_gemini_embedding_cached(self, review_id: str, text: str) -> Optional[List[float]]:
+        """Get embedding with caching to avoid repeated API calls."""
+        if review_id in self._embedding_cache:
+            return self._embedding_cache[review_id]
+        
+        embedding = self._get_gemini_embedding(text)
+        if embedding is not None:
+            self._embedding_cache[review_id] = embedding
+        return embedding
     
     def _get_gemini_embedding(self, text: str) -> Optional[List[float]]:
         """Get embedding from Gemini."""
@@ -373,10 +395,13 @@ class QualityGuardrail:
     
     def _fallback_semantic_similarity(self, review: Review, existing_reviews: List[Review]) -> float:
         """Fallback semantic similarity using word overlap."""
+        # Limit comparisons for performance
+        reviews_to_compare = existing_reviews[-self.max_comparison_reviews:]
+        
         review_words = set(re.findall(r'\b\w+\b', review.text.lower()))
         
         similarities = []
-        for existing_review in existing_reviews:
+        for existing_review in reviews_to_compare:
             existing_words = set(re.findall(r'\b\w+\b', existing_review.text.lower()))
             
             if not review_words or not existing_words:

@@ -27,7 +27,8 @@ def cli():
 @click.option("--output-dir", "-o", default="output", help="Output directory")
 @click.option("--num-samples", "-n", type=int, help="Number of samples to generate (overrides config)")
 @click.option("--real-reviews", "-r", help="Path to JSON file with real reviews for comparison")
-def generate(config: str, output_dir: str, num_samples: Optional[int], real_reviews: Optional[str]):
+@click.option("--async-mode/--no-async-mode", "use_async", default=True, help="Use async generation for faster processing (default: True)")
+def generate(config: str, output_dir: str, num_samples: Optional[int], real_reviews: Optional[str], use_async: bool):
     """Generate synthetic reviews."""
     console.print("[bold blue]Starting Review Generation[/bold blue]")
     
@@ -56,6 +57,11 @@ def generate(config: str, output_dir: str, num_samples: Optional[int], real_revi
     
     # Initialize workflow
     console.print("[blue]Initializing generation workflow...[/blue]")
+    if use_async:
+        console.print("[cyan]→[/cyan] Using async generation mode (faster)")
+    else:
+        console.print("[cyan]→[/cyan] Using synchronous generation mode")
+    
     workflow = ReviewGenerationWorkflow(cfg)
     
     # Generate reviews
@@ -67,7 +73,7 @@ def generate(config: str, output_dir: str, num_samples: Optional[int], real_revi
         console=console
     ) as progress:
         task = progress.add_task("Generating reviews...", total=None)
-        reviews = workflow.generate(cfg.generation.num_samples)
+        reviews = workflow.generate(cfg.generation.num_samples, use_async=use_async)
         progress.update(task, completed=True)
     
     console.print(f"[green]✓[/green] Generated {len(reviews)} reviews")

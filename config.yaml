@@ -5,7 +5,7 @@ generation:
   num_samples: 400
   min_samples: 300
   max_samples: 500
-  batch_size: 10
+  batch_size: 10  # Number of reviews to generate in parallel (async mode)
   max_retries: 5  # Maximum retries per review before moving to next
 
 # Model configuration

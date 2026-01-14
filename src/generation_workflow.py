@@ -2,6 +2,7 @@
 
 import uuid
 import random
+import asyncio
 from typing import Dict, Any, List, Optional, TypedDict
 from datetime import datetime
 import time
@@ -283,20 +284,40 @@ Write the review:"""
         return random.choice(tool_names)
     
     @traceable(name="run_generation")
-    def generate(self, num_samples: Optional[int] = None) -> List[Review]:
-        """Run the generation workflow."""
+    def generate(self, num_samples: Optional[int] = None, use_async: bool = True) -> List[Review]:
+        """Run the generation workflow - supports both sync and async modes."""
         if num_samples is None:
             num_samples = self.config.generation.num_samples
         
+        # Use async generation if requested and available
+        if use_async:
+            try:
+                from src.async_generation import AsyncReviewGenerator
+                async_gen = AsyncReviewGenerator(self.config)
+                # Run async generation
+                return asyncio.run(async_gen.generate(num_samples))
+            except ImportError:
+                print("⚠ Async generation not available, falling back to sync mode")
+                use_async = False
+            except Exception as e:
+                print(f"⚠ Async generation failed: {e}, falling back to sync mode")
+                use_async = False
+        
+        # Fallback to sync generation
+        return self._generate_sync(num_samples)
+    
+    def _generate_sync(self, num_samples: int) -> List[Review]:
+        """Synchronous generation (original implementation)."""
         # Initialize state
         stats = GenerationStats()
         accepted_reviews = []
         rejected_reviews = []
-        review_attempt = 0  # Track how many reviews we've attempted (not retries)
-        max_retries_per_review = 5  # Maximum retries per review (user requirement)
-        max_total_reviews = num_samples * 10  # Safety limit to prevent infinite loops
+        review_attempt = 0
+        max_retries_per_review = self.config.generation.max_retries
+        max_total_reviews = num_samples * 10
         
         print(f"Target: {num_samples} accepted reviews (max {max_retries_per_review} retries per review)")
+        print("Using synchronous generation mode")
         
         # Run generation loop - try to get one accepted review at a time
         while len(accepted_reviews) < num_samples and review_attempt < max_total_reviews:
@@ -327,17 +348,13 @@ Write the review:"""
                 
                 # Run workflow for one review (linear flow, no recursion)
                 try:
-                    # Set recursion limit to 10 (should be enough for linear flow)
                     final_state = self.workflow.invoke(state, config={"recursion_limit": 10})
                     
-                    # Get the current review from final state
                     current_review = final_state.get("current_review")
                     decision = final_state.get("decision")
                     
                     if current_review:
-                        # Add review to appropriate list based on decision
                         if decision == "accept":
-                            # Check if not already in accepted list
                             if current_review.id not in [r.id for r in accepted_reviews]:
                                 accepted_reviews.append(current_review)
                                 review_accepted = True
@@ -346,7 +363,6 @@ Write the review:"""
                                 else:
                                     print(f"  ✓ Accepted review {len(accepted_reviews)}/{num_samples}")
                         else:
-                            # Rejected
                             if current_review.id not in [r.id for r in rejected_reviews]:
                                 rejected_reviews.append(current_review)
                                 reason = final_state.get("rejection_reason", "Quality check failed")
@@ -355,7 +371,6 @@ Write the review:"""
                                 else:
                                     print(f"  ✗ Rejected (attempt {retry_count}/{max_retries_per_review}): {reason[:50]}... moving to next review")
                     
-                    # Update stats from final state
                     stats = final_state.get("stats", stats)
                     
                 except Exception as e:
@@ -364,27 +379,21 @@ Write the review:"""
                         print(f"  → Max retries reached for this review, moving to next")
                     continue
                 
-                # Break if we have enough accepted reviews
                 if len(accepted_reviews) >= num_samples:
                     break
             
-            # Progress indicator
             if review_attempt % 5 == 0 or len(accepted_reviews) >= num_samples:
                 print(f"Progress: {len(accepted_reviews)}/{num_samples} accepted, {len(rejected_reviews)} rejected, {review_attempt} reviews attempted")
             
-            # Break early if we have enough accepted reviews
             if len(accepted_reviews) >= num_samples:
                 break
         
-        # Calculate final stats
         if stats.total_generated > 0:
             stats.avg_time_per_review = stats.total_time_seconds / stats.total_generated
         
         print(f"\n✓ Generation complete: {len(accepted_reviews)} accepted, {len(rejected_reviews)} rejected, {review_attempt} reviews attempted")
         
         if len(accepted_reviews) < num_samples:
-            print(f"⚠ Warning: Only generated {len(accepted_reviews)}/{num_samples} accepted reviews. Consider:")
-            print(f"  - Adjusting quality thresholds in config.yaml")
-            print(f"  - Increasing max_retries_per_review (currently {max_retries_per_review})")
+            print(f"⚠ Warning: Only generated {len(accepted_reviews)}/{num_samples} accepted reviews")
         
         return accepted_reviews
