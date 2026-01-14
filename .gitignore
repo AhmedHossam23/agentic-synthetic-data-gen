@@ -37,11 +37,7 @@ ENV/
 .env
 .env.local
 
-# Output files
-output/
-*.json
-*.csv
-*.md
+
 
 # Logs
 *.log

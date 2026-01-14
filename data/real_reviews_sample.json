@@ -1,0 +1,37 @@
+[
+  {
+    "text": "We've been using Slack for over 2 years now and it's been a game-changer for our team communication. The channels feature helps us organize conversations by project, and the integrations with other tools are seamless. The only downside is that it can get expensive as you scale, but the value is definitely there.",
+    "rating": 5,
+    "source": "G2",
+    "tool_name": "Slack",
+    "category": "Communication"
+  },
+  {
+    "text": "Asana is great for project management, but the interface can be overwhelming at first. Once you get used to it, the features are powerful. The mobile app is decent but could use some improvements. Overall, it's a solid choice for teams that need detailed project tracking.",
+    "rating": 4,
+    "source": "Capterra",
+    "tool_name": "Asana",
+    "category": "Project Management"
+  },
+  {
+    "text": "HubSpot's CRM is comprehensive but the learning curve is steep. The free tier is generous, which is great for startups. However, some of the advanced features feel clunky compared to competitors. Customer support is responsive though.",
+    "rating": 3,
+    "source": "Trustpilot",
+    "tool_name": "HubSpot",
+    "category": "CRM"
+  },
+  {
+    "text": "Salesforce is the industry standard for a reason. The customization options are incredible, and the ecosystem of apps is unmatched. However, it's definitely overkill for small businesses and the pricing reflects that. Implementation can also be complex.",
+    "rating": 4,
+    "source": "G2",
+    "tool_name": "Salesforce",
+    "category": "CRM"
+  },
+  {
+    "text": "Zoom has become essential for remote work. The video quality is excellent and the reliability is top-notch. The free tier is limited to 40 minutes which can be frustrating, but the paid plans are reasonable. Security features have improved significantly.",
+    "rating": 5,
+    "source": "Capterra",
+    "tool_name": "Zoom",
+    "category": "Communication"
+  }
+]
